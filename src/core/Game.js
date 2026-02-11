@@ -317,6 +317,13 @@ export class Game {
         // Limpiar canvas
         this.renderer.clear();
         
+        // DEBUG: Verificar estado real del array army
+        if (this.frameCount % 60 === 0 && this.army.length > 0) {
+            console.log(`🔍 DEBUG Army: ${this.army.length} aliados`, 
+                this.army.map(a => ({x: Math.round(a.x), y: Math.round(a.y), active: a.active, owner: !!a.owner}))
+            );
+        }
+        
         // Renderizar grid de fondo
         this.renderer.showGrid = this.showDebug;
         this.renderer.renderGrid();
