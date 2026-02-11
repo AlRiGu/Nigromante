@@ -189,19 +189,13 @@ export class SpriteRenderer {
         
         // === CONFIGURACIÓN DE FANTASMA ===
         if (isGhost) {
-            // Aplicar un filtro de color para el efecto fantasmal y la transparencia.
-            // Esto se hace en un bloque save/restore para no afectar a otros elementos.
-            ctx.filter = 'hue-rotate(220deg) saturate(2) brightness(1.5)';
+            // Transparencia base para efecto fantasmal
+            // NO usar ctx.filter ya que causa problemas de visibilidad en algunos navegadores
+            ctx.globalAlpha = 0.75;
             
-            // Transparencia base
-            ctx.globalAlpha = 0.7;
-            
-            // Efecto de parpadeo
-            const flicker = 0.65 + Math.sin(time * 6) * 0.05;
+            // Efecto de parpadeo sutil
+            const flicker = 0.70 + Math.sin(time * 6) * 0.05;
             ctx.globalAlpha *= flicker;
-        } else {
-            // Asegurarse de que no haya filtro para los enemigos normales
-            ctx.filter = 'none';
         }
         
         // === SOMBRA ===
