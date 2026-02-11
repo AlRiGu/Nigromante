@@ -189,12 +189,11 @@ export class SpriteRenderer {
         
         // === CONFIGURACIÓN DE FANTASMA ===
         if (isGhost) {
-            // Transparencia base para efecto fantasmal
-            // NO usar ctx.filter ya que causa problemas de visibilidad en algunos navegadores
-            ctx.globalAlpha = 0.75;
+            // Transparencia para efecto fantasmal (visible pero espectral)
+            ctx.globalAlpha = 0.85;
             
-            // Efecto de parpadeo sutil
-            const flicker = 0.70 + Math.sin(time * 6) * 0.05;
+            // Efecto de parpadeo muy sutil
+            const flicker = 0.90 + Math.sin(time * 4) * 0.05;
             ctx.globalAlpha *= flicker;
         }
         

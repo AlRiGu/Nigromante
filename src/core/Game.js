@@ -317,13 +317,6 @@ export class Game {
         // Limpiar canvas
         this.renderer.clear();
         
-        // DEBUG: Verificar estado real del array army
-        if (this.frameCount % 60 === 0 && this.army.length > 0) {
-            console.log(`🔍 DEBUG Army: ${this.army.length} aliados`, 
-                this.army.map(a => ({x: Math.round(a.x), y: Math.round(a.y), active: a.active, owner: !!a.owner}))
-            );
-        }
-        
         // Renderizar grid de fondo
         this.renderer.showGrid = this.showDebug;
         this.renderer.renderGrid();
@@ -335,24 +328,7 @@ export class Game {
         const renderOrder = ['projectiles', 'enemyProjectiles', 'army', 'enemies'];
         this.entityManager.renderAll(this.ctx, renderOrder, this.gameTime);
         
-        // DEBUG: Renderizar aliados DIRECTAMENTE (bypass EntityManager)
-        if (this.army.length > 0) {
-            console.log(`🔴 Renderizando ${this.army.length} aliados DIRECTAMENTE`);
-            this.army.forEach((ally, i) => {
-                console.log(`   Aliado ${i}: x=${ally.x}, y=${ally.y}, active=${ally.active}, width=${ally.width}, height=${ally.height}`);
-                if (ally.active) {
-                    // DEBUG: Dibujar círculo azul grande directamente aquí
-                    this.ctx.save();
-                    this.ctx.fillStyle = 'blue';
-                    this.ctx.beginPath();
-                    this.ctx.arc(ally.x + ally.width/2, ally.y + ally.height/2, 25, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    this.ctx.restore();
-                    
-                    ally.render(this.ctx, this.gameTime);
-                }
-            });
-        }
+
         
         this.player.render(this.ctx, this.gameTime);
         

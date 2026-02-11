@@ -64,12 +64,6 @@ export class EntityManager {
      */
     render(group, ctx, gameTime = 0) {
         const entities = this.get(group);
-        
-        // DEBUG: Log del estado de renderizado
-        if (group === 'army' && entities.length > 0) {
-            console.log(`🎨 EntityManager.render('army'): ${entities.length} entidades a renderizar`);
-        }
-        
         entities.forEach(entity => entity.render(ctx, gameTime));
     }
 

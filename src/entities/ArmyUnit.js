@@ -382,14 +382,6 @@ export class ArmyUnit extends Entity {
      * @param {number} gameTime - Tiempo de juego para animaciones
      */
     render(ctx, gameTime = null) {
-        // DEBUG: Dibujar un círculo rojo muy visible para ver si render se ejecuta
-        ctx.save();
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(this.x + this.width/2, this.y + this.height/2, 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        
         // Usar el sprite del Orco en modo fantasma con persistencia visual del tipo original
         const time = gameTime !== null ? gameTime : (performance.now() / 1000);
         SpriteRenderer.renderOrc(
