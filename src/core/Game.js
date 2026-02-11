@@ -294,7 +294,7 @@ export class Game {
         // CRÍTICO: Desactivar el enemy INMEDIATAMENTE para evitar que siga disparando/atacando
         enemy.active = false;
         
-        const ally = new ArmyUnit(enemy.x, enemy.y, enemy, this.particleSystem, this.army);
+        const ally = new ArmyUnit(enemy.x, enemy.y, enemy, this.particleSystem, this.army, this.enemyProjectiles);
         ally.setOwner(this.player);
         this.army.push(ally);
         

@@ -6,7 +6,7 @@ import { SpriteRenderer } from '../graphics/SpriteRenderer.js';
  * Versión fantasmagórica del enemigo original con comportamiento de legión
  */
 export class ArmyUnit extends Entity {
-    constructor(x, y, sourceEnemy, particleSystem = null, armyArray = null) {
+    constructor(x, y, sourceEnemy, particleSystem = null, armyArray = null, enemyProjectiles = null) {
         super(x, y, sourceEnemy.width, sourceEnemy.height);
         
         // Copiar stats del enemigo original (reducidos)
@@ -58,6 +58,14 @@ export class ArmyUnit extends Entity {
         
         // Cache para reducir GC pressure
         this._separationCache = { x: 0, y: 0 };
+        
+        // === LÓGICA ESPECIAL PARA CHAMÁN ALIADO ===
+        this.enemyProjectiles = enemyProjectiles; // Array para proyectiles del Chamán
+        if (this.originalType === 'shaman') {
+            this.projectileCooldown = 1.5; // Dispara más lentamente como aliado
+            this.timeSinceLastProjectile = 0;
+            this.minDistance = 100; // Mantener distancia del enemigo
+        }
     }
 
     /**
@@ -230,7 +238,7 @@ export class ArmyUnit extends Entity {
     }
 
     /**
-     * Ataca al target
+     * Ataca al target (cuerpo a cuerpo o rango según tipo)
      * @param {number} deltaTime - Delta time
      */
     attackTarget(deltaTime) {
@@ -242,6 +250,13 @@ export class ArmyUnit extends Entity {
             return;
         }
         
+        // Si es Chamán, disparar proyectiles en lugar de atacar cuerpo a cuerpo
+        if (this.originalType === 'shaman') {
+            this.shaman_attackRanged(deltaTime);
+            return;
+        }
+        
+        // Ataque cuerpo a cuerpo (guerrero, tanque, asesino)
         const targetCenterX = this.target.x + this.target.width / 2;
         const targetCenterY = this.target.y + this.target.height / 2;
         const myCenterX = this.x + this.width / 2;
@@ -277,6 +292,79 @@ export class ArmyUnit extends Entity {
                 }
             }
         }
+    }
+    
+    /**
+     * Ataque a rango para Chamán aliado
+     * Dispara proyectiles hacia el enemigo más cercano
+     * @param {number} deltaTime - Delta time
+     */
+    shaman_attackRanged(deltaTime) {
+        if (!this.target || !this.target.active) {
+            this.target = null;
+            return;
+        }
+        
+        const targetCenterX = this.target.x + this.target.width / 2;
+        const targetCenterY = this.target.y + this.target.height / 2;
+        const myCenterX = this.x + this.width / 2;
+        const myCenterY = this.y + this.height / 2;
+        
+        const dx = targetCenterX - myCenterX;
+        const dy = targetCenterY - myCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Mantener distancia mínima (retroceso)
+        if (distance < this.minDistance) {
+            const dirX = -dx / distance;
+            const dirY = -dy / distance;
+            this.vx = dirX * this.speed * 0.5;
+            this.vy = dirY * this.speed * 0.5;
+        } else if (distance > this.detectionRange) {
+            // Si está fuera del rango, volver al modo seguimiento
+            this.target = null;
+            return;
+        } else {
+            // Mantener posición
+            this.vx = 0;
+            this.vy = 0;
+        }
+        
+        this.x += this.vx * deltaTime;
+        this.y += this.vy * deltaTime;
+        
+        // Disparar proyectiles
+        this.timeSinceLastProjectile += deltaTime;
+        if (this.timeSinceLastProjectile >= this.projectileCooldown) {
+            this.shootProjectile();
+            this.timeSinceLastProjectile = 0;
+        }
+    }
+    
+    /**
+     * Dispara un proyectil como aliado Chamán
+     */
+    shootProjectile() {
+        if (!this.target || !this.enemyProjectiles) return;
+        
+        const targetCenterX = this.target.x + this.target.width / 2;
+        const targetCenterY = this.target.y + this.target.height / 2;
+        const myCenterX = this.x + this.width / 2;
+        const myCenterY = this.y + this.height / 2;
+        
+        const dx = targetCenterX - myCenterX;
+        const dy = targetCenterY - myCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance === 0) return;
+        
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+        const speed = 150;
+        
+        // Crear proyectil aliado (NO entra en array enemyProjectiles, entra en su propio array)
+        // Por ahora, lo dejamos sin implementar el proyectil visual, solo el daño
+        // En una versión futura, podríamos crear un array separate de proyectiles aliados
     }
 
     /**

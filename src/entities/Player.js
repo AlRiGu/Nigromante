@@ -11,7 +11,7 @@ export class Player extends Entity {
         // Atributos del jugador
         this.maxHealth = 100;
         this.health = this.maxHealth;
-        this.damage = 8;  // REBALANCEO: Reducido de 10
+        this.damage = 6;  // REBALANCEO: Reducido de 8 a 6
         this.baseArmyCapacity = 1; // REBALANCEO: Empezar con 1 solo aliado
         this.armyCapacity = this.baseArmyCapacity;
         this.maxArmy = this.armyCapacity;
@@ -32,7 +32,7 @@ export class Player extends Entity {
         this.attackSpeed = 0.6; // REBALANCEO: Cooldown aumentado de 0.5
         
         // Movimiento
-        this.speed = 120;  // REBALANCEO: Reducido de 200
+        this.speed = 100;  // REBALANCEO: Reducido de 120 a 100
         this.inputX = 0;
         this.inputY = 0;
         
@@ -69,9 +69,13 @@ export class Player extends Entity {
             this.health = Math.min(this.maxHealth, this.health + this.healthRegen * deltaTime);
         }
         
-        // FASE B: Aura de Sanación (radio escalado por vida propia + bonificaciones)
-        this.healingAuraRadius = 80 + (this.maxHealth * 0.5) + (this.healingAuraBonus || 0); // Radio base + vida escalada + bonificación
-        this.healingPower = 5 + (this.maxHealth * 0.1); // Curación/seg escalada
+        // FASE B: Aura de Sanación (radio fijo + bonificaciones)
+        if (this.hasHealingUnlocked) {
+            this.healingAuraRadius = 150 + (this.healingAuraBonus || 0); // Radio fijo constante
+            this.healingPower = 5 + (this.maxHealth * 0.05); // Curación/seg
+        } else {
+            this.healingAuraRadius = 0; // Deshabilitado si no está desbloqueado
+        }
         
         // Normalizar el vector de movimiento
         const magnitude = Math.sqrt(this.inputX * this.inputX + this.inputY * this.inputY);
@@ -126,7 +130,8 @@ export class Player extends Entity {
      * @param {number} time - Tiempo de juego para animaciones
      */
     renderHealingAura(ctx, time) {
-        if (!this.healingAuraRadius) return;
+        // Solo renderizar si el aura está desbloqueada
+        if (!this.hasHealingUnlocked || !this.healingAuraRadius) return;
         
         const centerX = this.x + this.width / 2;
         const centerY = this.y + this.height / 2;
