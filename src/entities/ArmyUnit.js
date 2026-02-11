@@ -6,15 +6,24 @@ import { SpriteRenderer } from '../graphics/SpriteRenderer.js';
  * Versión fantasmagórica del enemigo original con comportamiento de legión
  */
 export class ArmyUnit extends Entity {
-    constructor(x, y, sourceEnemy, particleSystem = null, armyArray = null, enemyProjectiles = null) {
-        super(x, y, sourceEnemy.width, sourceEnemy.height);
+    constructor(x, y, unitType, unitStats, particleSystem = null, armyArray = null, enemyProjectiles = null) {
+        // FASE 2: Refactorizar reclutamiento - No depender del objeto Enemy
+        // unitType: 'warrior', 'tank', 'shaman', 'assassin'
+        // unitStats: { health, damage, speed, color, maxHealth, ... }
+        
+        // Calcular tamaño basado en tipo
+        const sizeMultiplier = ArmyUnit.getSizeMultiplier(unitType);
+        const baseSize = 28;
+        const actualSize = baseSize * sizeMultiplier;
+        
+        super(x, y, actualSize, actualSize);
         
         // Copiar stats del enemigo original (reducidos)
-        this.originalType = sourceEnemy.type;
-        this.damage = Math.floor(sourceEnemy.damage * 0.7); // 70% del daño original
-        this.speed = sourceEnemy.speed;
-        this.health = sourceEnemy.maxHealth;
-        this.maxHealth = sourceEnemy.maxHealth;
+        this.originalType = unitType;
+        this.damage = Math.floor(unitStats.damage * 0.7); // 70% del daño original
+        this.speed = unitStats.speed;
+        this.health = unitStats.maxHealth || unitStats.health || 30;
+        this.maxHealth = unitStats.maxHealth || unitStats.health || 30;
         
         // IA
         this.owner = null; // El jugador
@@ -29,7 +38,7 @@ export class ArmyUnit extends Entity {
         this.mode = 'follow'; // 'follow' o 'attack'
         
         // Visual fantasmagórico
-        this.baseColor = sourceEnemy.color;
+        this.baseColor = unitStats.color || '#4a7832';
         this.ghostOpacity = 0.6;
         this.flickerSpeed = 3; // Hz
         this.flickerPhase = Math.random() * Math.PI * 2;
@@ -66,6 +75,21 @@ export class ArmyUnit extends Entity {
             this.timeSinceLastProjectile = 0;
             this.minDistance = 100; // Mantener distancia del enemigo
         }
+    }
+
+    /**
+     * Obtiene el multiplicador de tamaño según el tipo (FASE 2)
+     * @param {string} type - Tipo de aliado
+     * @returns {number} - Multiplicador de tamaño
+     */
+    static getSizeMultiplier(type) {
+        const multipliers = {
+            warrior: 1.0,    // Tamaño estándar
+            tank: 2.0,       // 2x más grande
+            shaman: 0.9,     // Ligeramente más pequeño
+            assassin: 0.8    // Más pequeño y ágil
+        };
+        return multipliers[type] || 1.0;
     }
 
     /**

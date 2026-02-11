@@ -43,4 +43,34 @@ export class Entity {
                  a.bottom < b.top || 
                  a.top > b.bottom);
     }
+
+    /**
+     * Confina la entidad dentro de los límites del mapa
+     * FASE 1: Blindaje anti-huida para enemigos
+     * @param {number} mapWidth - Ancho del mapa
+     * @param {number} mapHeight - Alto del mapa
+     */
+    constrainToBounds(mapWidth, mapHeight) {
+        const margin = 5; // Pequeño margen para evitar glitches visuales
+        
+        if (this.x < margin) {
+            this.x = margin;
+            this.vx = Math.max(0, this.vx); // Solo permitir movimiento hacia afuera
+        }
+        
+        if (this.x + this.width > mapWidth - margin) {
+            this.x = mapWidth - this.width - margin;
+            this.vx = Math.min(0, this.vx); // Solo permitir movimiento hacia afuera
+        }
+        
+        if (this.y < margin) {
+            this.y = margin;
+            this.vy = Math.max(0, this.vy);
+        }
+        
+        if (this.y + this.height > mapHeight - margin) {
+            this.y = mapHeight - this.height - margin;
+            this.vy = Math.min(0, this.vy);
+        }
+    }
 }

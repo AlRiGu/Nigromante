@@ -122,8 +122,10 @@ export class Enemy extends Entity {
     /**
      * Actualiza el enemigo
      * @param {number} deltaTime - Delta time
+     * @param {number} mapWidth - Ancho del mapa (opcional, por defecto 1280)
+     * @param {number} mapHeight - Alto del mapa (opcional, por defecto 720)
      */
-    update(deltaTime) {
+    update(deltaTime, mapWidth = 1280, mapHeight = 720) {
         // Actualizar cooldown de ataque
         this.timeSinceLastAttack += deltaTime;
         
@@ -139,9 +141,9 @@ export class Enemy extends Entity {
         // Si tiene un target, perseguirlo o mantener distancia (Chamán)
         if (this.target) {
             if (this.type === 'shaman') {
-                this.keepDistance(deltaTime);
+                this.keepDistance(deltaTime, mapWidth, mapHeight);
             } else {
-                this.chaseTarget(deltaTime);
+                this.chaseTarget(deltaTime, mapWidth, mapHeight);
             }
         }
     }
@@ -149,8 +151,10 @@ export class Enemy extends Entity {
     /**
      * Persigue al target
      * @param {number} deltaTime - Delta time
+     * @param {number} mapWidth - Ancho del mapa (para constraining)
+     * @param {number} mapHeight - Alto del mapa (para constraining)
      */
-    chaseTarget(deltaTime) {
+    chaseTarget(deltaTime, mapWidth = 1280, mapHeight = 720) {
         // FASE A: IA Anti-Bloqueo - Si el target murió, resetear para buscar nuevo objetivo
         if (!this.target || !this.target.active || this.target.health <= 0) {
             this.target = null;  // Resetear para que findClosestTarget asigne nuevo objetivo
@@ -184,6 +188,9 @@ export class Enemy extends Entity {
             this.vx = 0;
             this.vy = 0;
         }
+        
+        // FASE 1: Confinar dentro del mapa (prevenir huida)
+        this.constrainToBounds(mapWidth, mapHeight);
     }
 
     /**
@@ -248,8 +255,10 @@ export class Enemy extends Entity {
     /**
      * Mantiene distancia del target (comportamiento del Chamán)
      * @param {number} deltaTime - Delta time
+     * @param {number} mapWidth - Ancho del mapa (para constraining)
+     * @param {number} mapHeight - Alto del mapa (para constraining)
      */
-    keepDistance(deltaTime) {
+    keepDistance(deltaTime, mapWidth = 1280, mapHeight = 720) {
         // FASE A: IA Anti-Bloqueo - Si el target murió, resetear para buscar nuevo objetivo
         if (!this.target || !this.target.active || this.target.health <= 0) {
             this.target = null;  // Resetear para que findClosestTarget asigne nuevo objetivo
@@ -294,6 +303,9 @@ export class Enemy extends Entity {
             this.vx = 0;
             this.vy = 0;
         }
+        
+        // FASE 1: Confinar dentro del mapa (prevenir huida)
+        this.constrainToBounds(mapWidth, mapHeight);
     }
     
     /**

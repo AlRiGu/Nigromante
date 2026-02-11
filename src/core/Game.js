@@ -224,8 +224,9 @@ export class Game {
         });
         
         // Actualizar todas las entidades usando EntityManager
+        // FASE 1: Pasar dimensiones del mapa para constraining de enemigos
         this.entityManager.update('army', deltaTime);
-        this.entityManager.update('enemies', deltaTime);
+        this.entityManager.update('enemies', deltaTime, this.width, this.height);
         this.entityManager.update('projectiles', deltaTime);
         this.entityManager.update('enemyProjectiles', deltaTime); // Proyectiles enemigos
         
@@ -294,7 +295,23 @@ export class Game {
         // CRÍTICO: Desactivar el enemy INMEDIATAMENTE para evitar que siga disparando/atacando
         enemy.active = false;
         
-        const ally = new ArmyUnit(enemy.x, enemy.y, enemy, this.particleSystem, this.army, this.enemyProjectiles);
+        // FASE 2: Extractar solo datos necesarios (no pasar objeto Enemy completo)
+        // Esto evita referencias muertas y crashes
+        const ally = new ArmyUnit(
+            enemy.x, 
+            enemy.y, 
+            enemy.type, 
+            {
+                health: enemy.maxHealth,
+                maxHealth: enemy.maxHealth,
+                damage: enemy.damage,
+                speed: enemy.speed,
+                color: enemy.color
+            },
+            this.particleSystem, 
+            this.army, 
+            this.enemyProjectiles
+        );
         ally.setOwner(this.player);
         this.army.push(ally);
         
