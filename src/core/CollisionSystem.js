@@ -96,6 +96,50 @@ export class CollisionSystem {
     }
 
     /**
+     * Resuelve colisiones entre proyectiles aliados y enemigos
+     * @param {Array} allyProjectiles - Array de proyectiles aliados
+     * @param {Array} enemies - Array de enemigos
+     */
+    resolveAllyProjectileEnemyCollisions(allyProjectiles, enemies) {
+        if (!Array.isArray(allyProjectiles) || !Array.isArray(enemies)) return [];
+
+        for (const projectile of allyProjectiles) {
+            if (!projectile.active || !projectile.fromAlly) continue;
+
+            for (const enemy of enemies) {
+                if (!enemy.active) continue;
+
+                // Usar bounding-box collidesWith si está disponible
+                if (typeof projectile.collidesWith === 'function') {
+                    if (!projectile.collidesWith(enemy)) continue;
+                } else {
+                    // Fallback: comprobar bounds manualmente
+                    const a = { left: projectile.x, right: projectile.x + (projectile.width || 0), top: projectile.y, bottom: projectile.y + (projectile.height || 0) };
+                    const b = enemy.getBounds ? enemy.getBounds() : { left: enemy.x, right: enemy.x + enemy.width, top: enemy.y, bottom: enemy.y + enemy.height };
+                    if (a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom) continue;
+                }
+
+                // Aplicar daño y desactivar proyectil
+                projectile.active = false;
+                const died = enemy.takeDamage(projectile.damage);
+
+                if (died) {
+                    if (this.eventBus) {
+                        this.eventBus.emit('enemy_defeated', { enemy, experience: enemy.experienceReward });
+                    }
+                }
+
+                if (this.eventBus) {
+                    this.eventBus.emit('projectile_hit', { projectile, target: enemy, damage: projectile.damage });
+                }
+
+                // Proyectil impactó, pasar al siguiente proyectil
+                break;
+            }
+        }
+    }
+
+    /**
      * Resuelve colisiones entre enemigos y el jugador
      * @param {Array} enemies - Array de enemigos
      * @param {Player} player - El jugador

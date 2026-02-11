@@ -1,12 +1,13 @@
 import { Entity } from './Entity.js';
 import { SpriteRenderer } from '../graphics/SpriteRenderer.js';
+import { Projectile } from './Projectile.js';
 
 /**
  * ArmyUnit - Unidad del ejército del nigromante
  * Versión fantasmagórica del enemigo original con comportamiento de legión
  */
 export class ArmyUnit extends Entity {
-    constructor(x, y, unitType, unitStats, particleSystem = null, armyArray = null, enemyProjectiles = null) {
+    constructor(x, y, unitType, unitStats, particleSystem = null, armyArray = null, enemyProjectiles = null, allyProjectiles = null) {
         // FASE 2: Refactorizar reclutamiento - No depender del objeto Enemy
         // unitType: 'warrior', 'tank', 'shaman', 'assassin'
         // unitStats: { health, damage, speed, color, maxHealth, ... }
@@ -70,6 +71,7 @@ export class ArmyUnit extends Entity {
         
         // === LÓGICA ESPECIAL PARA CHAMÁN ALIADO ===
         this.enemyProjectiles = enemyProjectiles; // Array para proyectiles del Chamán
+        this.allyProjectiles = allyProjectiles; // Array para proyectiles disparados por aliados
         if (this.originalType === 'shaman') {
             this.projectileCooldown = 1.5; // Dispara más lentamente como aliado
             this.timeSinceLastProjectile = 0;
@@ -106,6 +108,9 @@ export class ArmyUnit extends Entity {
      */
     update(deltaTime) {
         this.timeSinceLastAttack += deltaTime;
+        if (typeof this.timeSinceLastProjectile === 'number') {
+            this.timeSinceLastProjectile += deltaTime;
+        }
         this.hue += deltaTime * 50;
         if (this.hue > 360) this.hue = 0;
         
@@ -380,19 +385,86 @@ export class ArmyUnit extends Entity {
      * FASE 2: Fix del crash - asegurar que no falle sin proyectiles aliados definidos
      */
     shootProjectile() {
-        // Validación defensiva
+        // Validación defensiva básica
+        if (this.originalType !== 'shaman') return;
         if (!this.target || !this.target.active) {
             this.target = null;
             return;
         }
-        
-        // Por ahora, el Chamán aliado NO dispara proyectiles visuales
-        // Solo mantiene distancia y "simula" daño mediante proximidad
-        // Los proyectiles aliados serán implementados en una versión futura
-        // cuando se cree un array separado en Game.js
-        
-        // Esto evita el crash mientras mantenemos el comportamiento del Chamán
-        return;
+
+        // Cooldown
+        if (typeof this.timeSinceLastProjectile === 'number' && this.timeSinceLastProjectile < (this.projectileCooldown || 1.0)) {
+            return;
+        }
+
+        // Calcular dirección hacia el objetivo
+        const targetCenterX = this.target.x + (this.target.width || 0) / 2;
+        const targetCenterY = this.target.y + (this.target.height || 0) / 2;
+        const myCenterX = this.x + (this.width || 0) / 2;
+        const myCenterY = this.y + (this.height || 0) / 2;
+
+        let dx = targetCenterX - myCenterX;
+        let dy = targetCenterY - myCenterY;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        dx /= dist;
+        dy /= dist;
+
+        const speed = 320; // px/s
+        const vx = dx * speed;
+        const vy = dy * speed;
+
+        // Crear proyectil usando la clase existente para consistencia visual y colisiones
+        const projSize = 8;
+        const startX = myCenterX - projSize / 2;
+        const startY = myCenterY - projSize / 2;
+
+        let projectile;
+        try {
+            projectile = new Projectile(startX, startY, vx, vy, this.damage || 5, 'ally');
+        } catch (e) {
+            // Fallback: crear objeto con shape compatible si la clase falla
+            projectile = {
+                x: startX,
+                y: startY,
+                width: projSize,
+                height: projSize,
+                vx,
+                vy,
+                damage: this.damage || 5,
+                active: true,
+                fromAlly: true,
+                owner: 'ally',
+                update(dt) {
+                    this.x += this.vx * dt;
+                    this.y += this.vy * dt;
+                },
+                render(ctx) {
+                    ctx.fillStyle = '#00ffff';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                },
+                getBounds() {
+                    return { left: this.x, right: this.x + this.width, top: this.y, bottom: this.y + this.height };
+                },
+                collidesWith(other) {
+                    if (!other || !other.getBounds) return false;
+                    const a = this.getBounds();
+                    const b = other.getBounds();
+                    return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+                }
+            };
+        }
+
+        // Marcar como proveniente de aliado para colisiones específicas
+        try { projectile.fromAlly = true; } catch (e) {}
+        projectile.owner = 'ally';
+
+        // Push al array de proyectiles aliados si existe y es un array
+        if (Array.isArray(this.allyProjectiles)) {
+            this.allyProjectiles.push(projectile);
+        }
+
+        // Reset cooldown
+        this.timeSinceLastProjectile = 0;
     }
 
     /**

@@ -46,6 +46,7 @@ export class Game {
         this.enemies = [];
         this.army = [];
         this.projectiles = [];
+        this.allyProjectiles = []; // Proyectiles disparados por aliados (chamanes aliados)
         this.enemyProjectiles = []; // Proyectiles de enemigos (chamanes)
         
         // Controladores
@@ -61,6 +62,7 @@ export class Game {
         this.entityManager.register('enemies', this.enemies);
         this.entityManager.register('army', this.army);
         this.entityManager.register('projectiles', this.projectiles);
+        this.entityManager.register('allyProjectiles', this.allyProjectiles);
         this.entityManager.register('enemyProjectiles', this.enemyProjectiles);
         
         // Estado del juego
@@ -228,6 +230,7 @@ export class Game {
         this.entityManager.update('army', deltaTime);
         this.entityManager.update('enemies', deltaTime, this.width, this.height);
         this.entityManager.update('projectiles', deltaTime);
+        this.entityManager.update('allyProjectiles', deltaTime);
         this.entityManager.update('enemyProjectiles', deltaTime); // Proyectiles enemigos
         
         // Limpiar proyectiles fuera de bounds
@@ -243,12 +246,23 @@ export class Game {
                 this.enemyProjectiles[i].active = false;
             }
         }
+
+        // Limpiar proyectiles aliados fuera de bounds
+        for (let i = this.allyProjectiles.length - 1; i >= 0; i--) {
+            if (this.bounds.isOutOfBounds(this.allyProjectiles[i])) {
+                this.allyProjectiles[i].active = false;
+            }
+        }
         
         // Aplicar bounds a entidades que lo necesiten
         this.army.forEach(unit => this.bounds.clamp(unit));
         
         // Colisiones
         this.collisionSystem.resolveProjectileEnemyCollisions(this.projectiles, this.enemies);
+        // Colisiones de proyectiles aliados contra enemigos
+        if (this.allyProjectiles && this.allyProjectiles.length > 0) {
+            this.collisionSystem.resolveAllyProjectileEnemyCollisions(this.allyProjectiles, this.enemies);
+        }
         this.collisionSystem.resolveEnemyPlayerCollisions(this.enemies, this.player, deltaTime);
         this.collisionSystem.resolveEnemyAllyCollisions(this.enemies, this.army, deltaTime); // FASE 8
         this.collisionSystem.resolveEnemyProjectileCollisions(this.enemyProjectiles, this.player, this.army);
@@ -310,7 +324,8 @@ export class Game {
             },
             this.particleSystem, 
             this.army, 
-            this.enemyProjectiles
+            this.enemyProjectiles,
+            this.allyProjectiles
         );
         ally.setOwner(this.player);
         this.army.push(ally);
@@ -346,7 +361,9 @@ export class Game {
         
         // Renderizar entidades en orden (fondo a frente)
         const renderOrder = ['projectiles', 'enemyProjectiles', 'army', 'enemies'];
-        this.entityManager.renderAll(this.ctx, renderOrder, this.gameTime);
+        // Incluir proyectiles aliados en el orden de renderizado (después de los proyectiles del jugador)
+        const extendedRenderOrder = ['projectiles', 'allyProjectiles', 'enemyProjectiles', 'army', 'enemies'];
+        this.entityManager.renderAll(this.ctx, extendedRenderOrder, this.gameTime);
         
 
         
@@ -367,6 +384,7 @@ export class Game {
                 fps: this.fps,
                 enemyCount: this.enemies.length,
                 projectileCount: this.projectiles.length,
+                allyProjectileCount: this.allyProjectiles.length,
                 enemyProjectileCount: this.enemyProjectiles.length,
                 armyCount: this.army.length,
                 particleCount: this.particleSystem.getCount()
