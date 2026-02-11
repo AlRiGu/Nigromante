@@ -256,11 +256,15 @@ export class Game {
         this.particleSystem.update(deltaTime);
         
         // FASE A: Garbage Collection automático cada frame (Fuente de Verdad Única)
-        // Eliminar aliados muertos inmediatamente para mantener sincronización perfecta
+        // Eliminar aliados muertos IN-PLACE para no romper la referencia del EntityManager
         this.frameCount++;
-        const beforeCount = this.army.length;
-        this.army = this.army.filter(ally => ally.active && ally.health > 0);
-        const removedCount = beforeCount - this.army.length;
+        let removedCount = 0;
+        for (let i = this.army.length - 1; i >= 0; i--) {
+            if (!this.army[i].active || this.army[i].health <= 0) {
+                this.army.splice(i, 1);
+                removedCount++;
+            }
+        }
         
         if (removedCount > 0 && this.frameCount % 30 === 0) {
             console.log(`🧹 GC: ${removedCount} aliado(s) eliminado(s) - Contador real: ${this.army.length}/${this.player.armyCapacity}`);
