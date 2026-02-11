@@ -334,6 +334,17 @@ export class Game {
         // Renderizar entidades en orden (fondo a frente)
         const renderOrder = ['projectiles', 'enemyProjectiles', 'army', 'enemies'];
         this.entityManager.renderAll(this.ctx, renderOrder, this.gameTime);
+        
+        // DEBUG: Renderizar aliados DIRECTAMENTE (bypass EntityManager)
+        if (this.army.length > 0) {
+            console.log(`🔴 Renderizando ${this.army.length} aliados DIRECTAMENTE`);
+            this.army.forEach(ally => {
+                if (ally.active) {
+                    ally.render(this.ctx, this.gameTime);
+                }
+            });
+        }
+        
         this.player.render(this.ctx, this.gameTime);
         
         // Aplicar efectos de shader
