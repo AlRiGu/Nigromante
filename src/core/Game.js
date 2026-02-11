@@ -291,6 +291,9 @@ export class Game {
      * @param {Enemy} enemy - Enemigo a convertir
      */
     convertEnemyToAlly(enemy) {
+        // CRÍTICO: Desactivar el enemy INMEDIATAMENTE para evitar que siga disparando/atacando
+        enemy.active = false;
+        
         const ally = new ArmyUnit(enemy.x, enemy.y, enemy, this.particleSystem, this.army);
         ally.setOwner(this.player);
         this.army.push(ally);
@@ -389,8 +392,8 @@ export class Game {
     pauseForCards(level) {
         this.paused = true;
         
-        // Generar 3 cartas aleatorias
-        const cards = this.cardSystem.generateCards(3, level);
+        // Generar 3 cartas aleatorias (pasando el player para condiciones)
+        const cards = this.cardSystem.generateCards(3, level, this.player);
         this.uiManager.showCards(cards);
         
         console.log('🎴 Selector de cartas activado');

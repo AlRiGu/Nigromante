@@ -11,24 +11,28 @@ export class Player extends Entity {
         // Atributos del jugador
         this.maxHealth = 100;
         this.health = this.maxHealth;
-        this.damage = 10;
-        this.baseArmyCapacity = 5; // Renombrado de armyCapacityBase
-        this.armyCapacity = this.baseArmyCapacity; // Renombrado de armyCapacityBase
-        this.maxArmy = this.armyCapacity; // Alias para UI
+        this.damage = 8;  // REBALANCEO: Reducido de 10
+        this.baseArmyCapacity = 1; // REBALANCEO: Empezar con 1 solo aliado
+        this.armyCapacity = this.baseArmyCapacity;
+        this.maxArmy = this.armyCapacity;
         this.points = 0;
         this.level = 1;
-        this.xp = 0; // Alias de experience para UI
+        this.xp = 0;
         this.experience = 0;
-        this.xpToNextLevel = 100; // Alias de experienceToNextLevel para UI
+        this.xpToNextLevel = 100;
         this.experienceToNextLevel = 100;
+        
+        // Sistema de desbloqueos
+        this.hasHealingUnlocked = false;  // FASE B: Aura deshabilitada al inicio
+        this.healingAuraBonus = 0;  // Bonificación adicional al rango del aura
         
         // Atributos para upgrades de cartas
         this.healthRegen = 0; // Regeneración de vida por segundo
         this.pointsMultiplier = 1.0; // Multiplicador de puntos
-        this.attackSpeed = 0.5; // Cooldown entre ataques (segundos)
+        this.attackSpeed = 0.6; // REBALANCEO: Cooldown aumentado de 0.5
         
         // Movimiento
-        this.speed = 200; // pixels por segundo
+        this.speed = 120;  // REBALANCEO: Reducido de 200
         this.inputX = 0;
         this.inputY = 0;
         
@@ -65,8 +69,8 @@ export class Player extends Entity {
             this.health = Math.min(this.maxHealth, this.health + this.healthRegen * deltaTime);
         }
         
-        // FASE B: Aura de Sanación (radio escalado por vida propia)
-        this.healingAuraRadius = 80 + (this.maxHealth * 0.5); // Radio base + vida escalada
+        // FASE B: Aura de Sanación (radio escalado por vida propia + bonificaciones)
+        this.healingAuraRadius = 80 + (this.maxHealth * 0.5) + (this.healingAuraBonus || 0); // Radio base + vida escalada + bonificación
         this.healingPower = 5 + (this.maxHealth * 0.1); // Curación/seg escalada
         
         // Normalizar el vector de movimiento
@@ -163,6 +167,8 @@ export class Player extends Entity {
      * @param {number} deltaTime - Tiempo transcurrido
      */
     applyHealingAura(allies, deltaTime) {
+        // Solo aplicar si está desbloqueada
+        if (!this.hasHealingUnlocked) return;
         if (!this.healingAuraRadius || !this.healingPower) return;
         
         const centerX = this.x + this.width / 2;

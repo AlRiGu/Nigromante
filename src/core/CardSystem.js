@@ -195,6 +195,55 @@ export class CardSystem {
                     player.baseArmyCapacity += 2;
                     player.updateArmyCapacity();
                 }
+            },
+            
+            // === NUEVAS CARTAS EVOLUTIVAS (FASE B+C) ===
+            {
+                id: 'healing_unlock',
+                name: 'Despertar Sangriento',
+                description: 'Desbloquea tu aura de curación para aliados',
+                icon: '🩸',
+                rarity: 'Epic',
+                type: 'special',
+                value: 'Aura Desbloqueada',
+                valueColor: '#ff00ff',
+                conditions: (player) => !player.hasHealingUnlocked, // Solo aparece si no está desbloqueada
+                effect: (player) => {
+                    player.hasHealingUnlocked = true;
+                    console.log('✨ Aura de curación desbloqueada');
+                }
+            },
+            {
+                id: 'healing_range',
+                name: 'Vínculo Vital',
+                description: 'Expande el rango de tu aura de curación',
+                icon: '💜',
+                rarity: 'Rare',
+                type: 'special',
+                value: '+40 Rango',
+                valueColor: '#ff00ff',
+                conditions: (player) => player.hasHealingUnlocked, // Solo aparece si aura está desbloqueada
+                effect: (player) => {
+                    // La fórmula del aura es: 80 + (maxHealth * 0.5) + bonificación
+                    if (!player.healingAuraBonus) player.healingAuraBonus = 0;
+                    player.healingAuraBonus += 40;
+                    console.log('💜 Rango del aura expandido');
+                }
+            },
+            {
+                id: 'master_souls',
+                name: 'Maestro de Almas',
+                description: 'Aumenta tu capacidad de invocación',
+                icon: '⚜️',
+                rarity: 'Epic',
+                type: 'army',
+                value: '+2 Aliados',
+                valueColor: '#00ffff',
+                effect: (player) => {
+                    player.baseArmyCapacity += 2;
+                    player.updateArmyCapacity();
+                    console.log('⚜️ Capacidad de ejército aumentada');
+                }
             }
         ];
         
@@ -210,7 +259,7 @@ export class CardSystem {
     /**
      * Genera cartas aleatorias para el nivel actual
      */
-    generateCards(count, playerLevel) {
+    generateCards(count, playerLevel, player = null) {
         const cards = [];
         const usedIds = new Set();
         
@@ -231,14 +280,21 @@ export class CardSystem {
         
         while (cards.length < count) {
             const rarity = this.selectRarity(adjustedWeights);
-            const availableCards = this.cardLibrary.filter(c => 
-                c.rarity === rarity && !usedIds.has(c.id)
-            );
+            const availableCards = this.cardLibrary.filter(c => {
+                const notUsed = !usedIds.has(c.id);
+                const matchesRarity = c.rarity === rarity;
+                // Verificar condiciones si existen
+                const conditionsMet = !c.conditions || (player && c.conditions(player));
+                return notUsed && matchesRarity && conditionsMet;
+            });
             
             if (availableCards.length > 0) {
                 const card = availableCards[Math.floor(Math.random() * availableCards.length)];
                 cards.push({ ...card }); // Copiar carta
                 usedIds.add(card.id);
+            } else {
+                // Si no hay cartas disponibles (todas tienen condiciones no cumplidas), romper el bucle
+                break;
             }
         }
         
