@@ -1,0 +1,103 @@
+import { Entity } from './Entity.js';
+
+/**
+ * Proyectil - Ataque del nigromante
+ */
+export class Projectile extends Entity {
+    constructor(x, y, vx, vy, damage, owner = 'player') {
+        super(x, y, 8, 8);
+        
+        this.vx = vx;
+        this.vy = vy;
+        this.damage = damage;
+        this.owner = owner; // 'player' o 'enemy'
+        this.speed = 400; // pixels por segundo
+        this.lifetime = 3; // segundos
+        this.age = 0;
+        
+        // Visual
+        this.color = owner === 'player' ? '#bd00ff' : '#ff0000';
+        this.glowColor = owner === 'player' ? '#8b00ff' : '#ff6600';
+        this.trailPositions = [];
+        this.maxTrailLength = 5;
+    }
+
+    update(deltaTime) {
+        // Actualizar posición
+        this.x += this.vx * deltaTime;
+        this.y += this.vy * deltaTime;
+        
+        // Actualizar edad
+        this.age += deltaTime;
+        
+        // Guardar posición para el trail
+        this.trailPositions.push({ x: this.x, y: this.y });
+        if (this.trailPositions.length > this.maxTrailLength) {
+            this.trailPositions.shift();
+        }
+        
+        // Desactivar si excede el tiempo de vida
+        if (this.age >= this.lifetime) {
+            this.active = false;
+        }
+    }
+
+    render(ctx) {
+        // Renderizar trail
+        for (let i = 0; i < this.trailPositions.length; i++) {
+            const pos = this.trailPositions[i];
+            const alpha = (i + 1) / this.trailPositions.length * 0.5;
+            
+            ctx.fillStyle = this.glowColor + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+            const size = this.width * ((i + 1) / this.trailPositions.length);
+            ctx.fillRect(
+                pos.x - size / 2 + this.width / 2,
+                pos.y - size / 2 + this.height / 2,
+                size,
+                size
+            );
+        }
+        
+        // Aura del proyectil
+        const gradient = ctx.createRadialGradient(
+            this.x + this.width / 2,
+            this.y + this.height / 2,
+            0,
+            this.x + this.width / 2,
+            this.y + this.height / 2,
+            this.width * 2
+        );
+        gradient.addColorStop(0, this.glowColor + 'AA');
+        gradient.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(
+            this.x - this.width,
+            this.y - this.height,
+            this.width * 3,
+            this.height * 3
+        );
+        
+        // Núcleo del proyectil
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Brillo central
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(
+            this.x + this.width / 4,
+            this.y + this.height / 4,
+            this.width / 2,
+            this.height / 2
+        );
+    }
+
+    /**
+     * Verifica si el proyectil está fuera de los bounds
+     * @param {Bounds} bounds - Sistema de límites
+     * @returns {boolean}
+     */
+    isOutOfBounds(bounds) {
+        return bounds.isOutOfBounds(this);
+    }
+}
