@@ -320,33 +320,46 @@ export class ArmyUnit extends Entity {
     
     /**
      * Ataque a rango para Chamán aliado
-     * Dispara proyectiles hacia el enemigo más cercano
+     * Mantiene distancia y dispara proyectiles (si estuvieran implementados)
      * @param {number} deltaTime - Delta time
      */
     shaman_attackRanged(deltaTime) {
+        // Validación defensiva: asegurar que el target sea válido
         if (!this.target || !this.target.active) {
             this.target = null;
+            this.vx = 0;
+            this.vy = 0;
             return;
         }
         
-        const targetCenterX = this.target.x + this.target.width / 2;
-        const targetCenterY = this.target.y + this.target.height / 2;
-        const myCenterX = this.x + this.width / 2;
-        const myCenterY = this.y + this.height / 2;
+        // Validar que tenemos valores numéricos válidos
+        const targetCenterX = this.target.x + (this.target.width || 0) / 2;
+        const targetCenterY = this.target.y + (this.target.height || 0) / 2;
+        const myCenterX = this.x + (this.width || 0) / 2;
+        const myCenterY = this.y + (this.height || 0) / 2;
         
         const dx = targetCenterX - myCenterX;
         const dy = targetCenterY - myCenterY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
+        // Validar distancia válida
+        if (!isFinite(distance) || distance < 0) {
+            this.vx = 0;
+            this.vy = 0;
+            return;
+        }
+        
         // Mantener distancia mínima (retroceso)
-        if (distance < this.minDistance) {
-            const dirX = -dx / distance;
-            const dirY = -dy / distance;
-            this.vx = dirX * this.speed * 0.5;
-            this.vy = dirY * this.speed * 0.5;
-        } else if (distance > this.detectionRange) {
+        if (distance < (this.minDistance || 100)) {
+            const dirX = -dx / (distance || 1);
+            const dirY = -dy / (distance || 1);
+            this.vx = dirX * (this.speed || 60) * 0.5;
+            this.vy = dirY * (this.speed || 60) * 0.5;
+        } else if (distance > (this.detectionRange || 400)) {
             // Si está fuera del rango, volver al modo seguimiento
             this.target = null;
+            this.vx = 0;
+            this.vy = 0;
             return;
         } else {
             // Mantener posición
@@ -357,38 +370,29 @@ export class ArmyUnit extends Entity {
         this.x += this.vx * deltaTime;
         this.y += this.vy * deltaTime;
         
-        // Disparar proyectiles
-        this.timeSinceLastProjectile += deltaTime;
-        if (this.timeSinceLastProjectile >= this.projectileCooldown) {
-            this.shootProjectile();
-            this.timeSinceLastProjectile = 0;
-        }
+        // FASE 2: Disparar proyectiles (apenas esté implementado el sistema de proyectiles aliados)
+        // Por ahora solo mantiene distancia y ataca mediante proximidad cuando persigue
+        // this.shootProjectile(); // Comentado hasta implementar array de proyectiles aliados
     }
     
     /**
      * Dispara un proyectil como aliado Chamán
+     * FASE 2: Fix del crash - asegurar que no falle sin proyectiles aliados definidos
      */
     shootProjectile() {
-        if (!this.target || !this.enemyProjectiles) return;
+        // Validación defensiva
+        if (!this.target || !this.target.active) {
+            this.target = null;
+            return;
+        }
         
-        const targetCenterX = this.target.x + this.target.width / 2;
-        const targetCenterY = this.target.y + this.target.height / 2;
-        const myCenterX = this.x + this.width / 2;
-        const myCenterY = this.y + this.height / 2;
+        // Por ahora, el Chamán aliado NO dispara proyectiles visuales
+        // Solo mantiene distancia y "simula" daño mediante proximidad
+        // Los proyectiles aliados serán implementados en una versión futura
+        // cuando se cree un array separado en Game.js
         
-        const dx = targetCenterX - myCenterX;
-        const dy = targetCenterY - myCenterY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance === 0) return;
-        
-        const dirX = dx / distance;
-        const dirY = dy / distance;
-        const speed = 150;
-        
-        // Crear proyectil aliado (NO entra en array enemyProjectiles, entra en su propio array)
-        // Por ahora, lo dejamos sin implementar el proyectil visual, solo el daño
-        // En una versión futura, podríamos crear un array separate de proyectiles aliados
+        // Esto evita el crash mientras mantenemos el comportamiento del Chamán
+        return;
     }
 
     /**
