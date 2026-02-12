@@ -62,24 +62,28 @@ export class UIManager {
      * Renderiza el HUD superior con stats del jugador
      */
     renderHUD(ctx, player, armyCount) {
-        const padding = 20;
-        const barWidth = 200;
-        const barHeight = 25;
+        // Detectar si está en móvil para escalar UI
+        const isMobile = window.innerWidth < 768;
+        const uiScale = isMobile ? 1.5 : 1; // 50% más grande en móvil
+        
+        const padding = 20 * uiScale;
+        const barWidth = 200 * uiScale;
+        const barHeight = 25 * uiScale;
         
         ctx.save();
         
         // Fondo semitransparente para el HUD
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(0, 0, this.width, 80);
+        ctx.fillRect(0, 0, this.width, 80 * uiScale);
         
         // Nivel del jugador
         ctx.fillStyle = this.colors.textPrimary;
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(`Nivel ${player.level}`, padding, 35);
+        ctx.font = `bold ${Math.floor(24 * uiScale)}px Arial`;
+        ctx.fillText(`Nivel ${player.level}`, padding, 35 * uiScale);
         
         // Barra de experiencia
         const xpBarX = padding;
-        const xpBarY = 45;
+        const xpBarY = 45 * uiScale;
         const xpPercent = player.xp / player.xpToNextLevel;
         
         // Fondo de la barra
@@ -92,12 +96,12 @@ export class UIManager {
         
         // Texto de XP
         ctx.fillStyle = this.colors.textPrimary;
-        ctx.font = '14px Arial';
-        ctx.fillText(`XP: ${Math.floor(player.xp)}/${player.xpToNextLevel}`, xpBarX + 5, xpBarY + 17);
+        ctx.font = `${Math.floor(14 * uiScale)}px Arial`;
+        ctx.fillText(`XP: ${Math.floor(player.xp)}/${player.xpToNextLevel}`, xpBarX + 5, xpBarY + 17 * uiScale);
         
         // Barra de vida
         const hpBarX = barWidth + padding * 2 + 20;
-        const hpBarY = 45;
+        const hpBarY = 45 * uiScale;
         const hpPercent = player.health / player.maxHealth;
         
         // Fondo de la barra de vida
@@ -111,20 +115,20 @@ export class UIManager {
         
         // Texto de vida
         ctx.fillStyle = this.colors.textPrimary;
-        ctx.font = '14px Arial';
-        ctx.fillText(`HP: ${Math.floor(player.health)}/${player.maxHealth}`, hpBarX + 5, hpBarY + 17);
+        ctx.font = `${Math.floor(14 * uiScale)}px Arial`;
+        ctx.fillText(`HP: ${Math.floor(player.health)}/${player.maxHealth}`, hpBarX + 5, hpBarY + 17 * uiScale);
         
         // Contador de ejército (derecha)
         const armyTextX = this.width - padding;
-        ctx.font = 'bold 24px Arial';
+        ctx.font = `bold ${Math.floor(24 * uiScale)}px Arial`;
         ctx.fillStyle = '#00ffff';
         ctx.textAlign = 'right';
-        ctx.fillText(`👻 ${armyCount}/${player.maxArmy}`, armyTextX, 35);
+        ctx.fillText(`👻 ${armyCount}/${player.maxArmy}`, armyTextX, 35 * uiScale);
         
         // Puntos acumulados
-        ctx.font = '16px Arial';
+        ctx.font = `${Math.floor(16 * uiScale)}px Arial`;
         ctx.fillStyle = this.colors.textSecondary;
-        ctx.fillText(`Puntos: ${Math.floor(player.points)}`, armyTextX, 60);
+        ctx.fillText(`Puntos: ${Math.floor(player.points)}`, armyTextX, 60 * uiScale);
         
         ctx.textAlign = 'left';
         ctx.restore();

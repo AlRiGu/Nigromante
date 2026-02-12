@@ -5,10 +5,12 @@
 export class VirtualJoystick {
     constructor(canvas) {
         this.canvas = canvas;
+        this.isMobile = this.checkMobile();
         
-        // Posición y tamaño del joystick
-        this.baseRadius = 50;
-        this.stickRadius = 30;
+        // Posición y tamaño del joystick (50% más grande en móvil)
+        const sizeScale = this.isMobile ? 1.5 : 1;
+        this.baseRadius = 50 * sizeScale;
+        this.stickRadius = 30 * sizeScale;
         this.baseX = this.baseRadius + 20; // Margen izquierdo
         this.baseY = canvas.height - this.baseRadius - 20; // Margen inferior
         
@@ -20,9 +22,6 @@ export class VirtualJoystick {
         // Input direction normalizado (-1 a 1)
         this.directionX = 0;
         this.directionY = 0;
-        
-        // Visibilidad en móviles
-        this.isMobile = this.checkMobile();
         
         // Event listeners
         this.setupEventListeners();

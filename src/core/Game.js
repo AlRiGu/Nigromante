@@ -97,30 +97,12 @@ export class Game {
      * Configura responsividad del canvas (mobile-first)
      */
     setupCanvasResponsiveness() {
-        const updateCanvasSize = () => {
-            const isMobile = window.innerWidth < 768;
-            
-            if (isMobile) {
-                // En móvil, usar viewport width (con máximo)
-                const maxWidth = Math.min(window.innerWidth - 10, 720);
-                const scale = maxWidth / 1280;
-                
-                this.canvas.width = Math.floor(maxWidth);
-                this.canvas.height = Math.floor(scale * 720);
-                
-                // Escalar contenido
-                this.ctx.scale(scale, scale);
-            } else {
-                // En desktop, mantener tamaño original
-                this.canvas.width = 1280;
-                this.canvas.height = 720;
-            }
-        };
+        this.isMobile = window.innerWidth < 768;
         
-        updateCanvasSize();
-        
-        // Redibujar al cambiar tamaño de ventana
-        window.addEventListener('resize', updateCanvasSize);
+        // Canvas siempre 1280x720 para mantener lógica consistente
+        this.canvas.width = 1280;
+        this.canvas.height = 720;
+        this.uiScale = this.isMobile ? 1.5 : 1; // Scale UI elements 50% en móvil
     }
     
     setupEventListeners() {
@@ -476,8 +458,8 @@ export class Game {
             joystick.render(this.ctx);
         }
         
-        // Debug
-        if (this.showDebug) {
+        // Debug (solo en desktop)
+        if (this.showDebug && !this.isMobile) {
             this.renderer.renderDebug({
                 fps: this.fps,
                 enemyCount: this.enemies.length,
