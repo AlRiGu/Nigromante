@@ -208,9 +208,16 @@ export class SpriteRenderer {
      * @param {Object} cache - Cache para gradientes (reservado para optimización futura)
      */
     static renderOrc(ctx, x, y, width, height, time = 0, isGhost = false, cache = null, type = 'warrior') {
-        // Validaciones críticas
-        if (!ctx || width <= 0 || height <= 0) return;
+        // Conversión explícita a números y validación de finitud
+        x = Number(x) || 0;
+        y = Number(y) || 0;
+        width = Number(width) || 0;
+        height = Number(height) || 0;
         time = Number(time) || 0;
+        
+        // Validaciones críticas: evitar valores no-finitos (NaN, Infinity)
+        if (!ctx || !isFinite(x) || !isFinite(y) || !isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return;
+        
         isGhost = Boolean(isGhost);
         
         // TODO: Implementar gradient caching completo requiere refactoring a coordenadas relativas
