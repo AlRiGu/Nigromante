@@ -18,9 +18,9 @@ Este repositorio contiene el juego "Nigromante" (roguelike, Canvas + JavaScript)
 ## Posibles errores detectados / áreas a revisar
 
 1. ArmyUnit: proyectiles aliados
-   - Estado: `shootProjectile()` actualmente es un fallback vacío para evitar crashes. Falta implementación de array propio de proyectiles aliados y lógica de spawn/colisión.
-   - Riesgo: si en el futuro se usa `enemyProjectiles` para proyectiles aliados o si `enemyProjectiles` se elimina, puede reintroducirse crash.
-   - Archivos: [src/entities/ArmyUnit.js](src/entities/ArmyUnit.js)
+   - Estado: implementado — `ArmyUnit.shootProjectile()` crea proyectiles aliados y los registra en `Game.allyProjectiles`. El render y la lógica básica de colisión para proyectiles aliados fue añadida.
+   - Riesgo restante: pulir visuales y agregar más pruebas automatizadas; riesgos menores de refinamiento, no bloqueo crítico.
+   - Archivos: [src/entities/ArmyUnit.js](src/entities/ArmyUnit.js), [src/entities/Projectile.js](src/entities/Projectile.js), [src/core/CollisionSystem.js](src/core/CollisionSystem.js)
 
 2. Dependencia de arrays globales por referencia
    - Estado: `Game` pasa `this.enemyProjectiles` y `this.army` por referencia. Es correcto, pero requiere que esos arrays siempre existan y sean coherentes.
@@ -48,9 +48,8 @@ Este repositorio contiene el juego "Nigromante" (roguelike, Canvas + JavaScript)
 
 ## Recomendaciones (priorizadas)
 
-1. Implementar array de `allyProjectiles` en `Game` y usarlo en `ArmyUnit.shootProjectile()` (alta prioridad).
-   - Crear: `this.allyProjectiles = [];` y registrar en `EntityManager`.
-   - Modificar `ArmyUnit.shootProjectile()` para push de proyectiles en `game.allyProjectiles` o recibir por constructor.
+1. (Implementado) `allyProjectiles` en `Game` y `ArmyUnit.shootProjectile()`.
+   - Nota: la integración básica está en sitio; considerar ampliaciones (sonido, partículas, tests).
 
 2. Forzar limpieza in-place de arrays centrales si es necesario (usar `splice` o `length = 0`). Evitar reasignaciones.
 
@@ -66,7 +65,7 @@ Este repositorio contiene el juego "Nigromante" (roguelike, Canvas + JavaScript)
 
 ## Acciones sugeridas (tickets)
 
-1. [HIGH] Implementar `allyProjectiles` + `ArmyUnit.shootProjectile()` funcional.
+1. [DONE] `allyProjectiles` + `ArmyUnit.shootProjectile()` implementado (ver archivos indicados).
 2. [MED] Revisión de reasignaciones de arrays globales y documentar patrón (referencia in-place).
 3. [MED] Ejecutar batería de pruebas manuales y documentar pasos en `README.md`.
 4. [LOW] Pulir `SpriteRenderer` y asegurar `ctx.restore()` en todas las rutas.
@@ -92,4 +91,4 @@ git push
 
 ---
 
-Si quieres, implemento de inmediato la creación de `allyProjectiles` y la integración completa de proyectiles aliados (creación, colisión, render). ¿Procedo con eso ahora?
+Si quieres, implemento mejoras adicionales para proyectiles aliados (sonido, partículas, tests automatizados). ¿Cuál prefieres?
