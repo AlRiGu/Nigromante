@@ -457,7 +457,43 @@ Cada fase del desarrollo pasó por una revisión triple con 3 subagentes especia
   - Fondo: Negro profundo (#0a0a0a)
   - UI: Tonos azules y púrpuras
 
-## 📝 Licencia
+## � Soporte Móvil
+
+**Experiencia Professional en Dispositivos Táctiles:**
+
+### Características Móviles Implementadas
+- ✅ **Canvas Fullscreen**: 100vw × 100vh sin letterbox
+- ✅ **Joystick Virtual**: Tamaño 50% mayor para mejor usabilidad táctil
+- ✅ **Auto-Attack**: Disparo automático al enemigo más cercano
+- ✅ **Responsive UI**: 
+  - Barra de HP escalada 50% más grande
+  - Nivel, puntos y contador de ejército ampliados
+  - Texto legible en pantallas pequeñas
+- ✅ **Debug UI Oculto**: Sin overlays en móviles para pantalla limpia
+- ✅ **Viewport Configurado**: 
+  - Meta viewport con `viewport-fit=cover`
+  - Support para notch de iPhone
+  - Zoom deshabilitado para mejor control táctil
+
+### Validación Móvil
+- ✅ Detección automática (< 768px de ancho)
+- ✅ Touch events con prevención de scroll
+- ✅ CSS `touch-action: none` para evitar gestos del navegador
+- ✅ Renderizado sin transformaciones ctx innecesarias
+
+### Testing Recomendado
+```bash
+# Desktop
+npm run dev
+# Luego abrir en Chrome DevTools → Mobile device
+
+# Dispositivo real con Brave Browser
+# URL: git push → GitHub Pages → https://alrigu.github.io/Nigromante
+```
+
+**Juego completamente funcional en:** 📱 iPhone (6s+) | 📱 Android | 💻 Desktop
+
+## �📝 Licencia
 
 Proyecto educativo - MIT License
 
