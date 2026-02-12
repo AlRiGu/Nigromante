@@ -25,21 +25,33 @@
         }
         body {
             background: #0a0a0a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             font-family: 'Arial', sans-serif;
             overflow: hidden;
             position: fixed;
+            width: 100vw;
+            height: 100vh;
         }
         #gameCanvas {
-            border: 2px solid #2a2a2a;
-            box-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
             display: block;
             touch-action: none;
+            width: 100vw;
+            height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+        @media (min-width: 768px) {
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            #gameCanvas {
+                border: 2px solid #2a2a2a;
+                box-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
+            }
         }
     </style>
-  <script type="module" crossorigin src="/Nigromante/assets/index-BrSaxc3u.js"></script>
+  <script type="module" crossorigin src="/Nigromante/assets/index-BmpENvKM.js"></script>
 </head>
 <body>
     <canvas id="gameCanvas" width="1280" height="720"></canvas>
