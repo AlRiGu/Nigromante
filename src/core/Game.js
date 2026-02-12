@@ -26,11 +26,14 @@ export class Game {
             throw new Error('No se pudo obtener el contexto 2D del canvas');
         }
         
+        // Hacer responsive el canvas
+        this.setupCanvasResponsiveness();
+        
         this.width = canvas.width;
         this.height = canvas.height;
         
         // Sistemas core
-        this.inputManager = new InputManager();
+        this.inputManager = new InputManager(canvas); // Pasar canvas para joystick móvil
         this.entityManager = new EntityManager();
         this.renderer = new Renderer(this.ctx, this.width, this.height);
         this.eventBus = new EventBus();
@@ -58,6 +61,10 @@ export class Game {
         this.enemySpawnCooldown = 0.5; // segundos entre spawns
         this.timeSinceLastSpawn = 0;
         
+        // Auto-ataque (móvil)
+        this.autoAttackCooldown = 0.3;
+        this.timeSinceAutoAttack = 0;
+        
         // Registrar grupos de entidades
         this.entityManager.register('enemies', this.enemies);
         this.entityManager.register('army', this.army);
@@ -84,6 +91,36 @@ export class Game {
         // Configurar listeners de eventos
         this.setupEventListeners();
         this.setupMouseListeners();
+    }
+    
+    /**
+     * Configura responsividad del canvas (mobile-first)
+     */
+    setupCanvasResponsiveness() {
+        const updateCanvasSize = () => {
+            const isMobile = window.innerWidth < 768;
+            
+            if (isMobile) {
+                // En móvil, usar viewport width (con máximo)
+                const maxWidth = Math.min(window.innerWidth - 10, 720);
+                const scale = maxWidth / 1280;
+                
+                this.canvas.width = Math.floor(maxWidth);
+                this.canvas.height = Math.floor(scale * 720);
+                
+                // Escalar contenido
+                this.ctx.scale(scale, scale);
+            } else {
+                // En desktop, mantener tamaño original
+                this.canvas.width = 1280;
+                this.canvas.height = 720;
+            }
+        };
+        
+        updateCanvasSize();
+        
+        // Redibujar al cambiar tamaño de ventana
+        window.addEventListener('resize', updateCanvasSize);
     }
     
     setupEventListeners() {
@@ -202,6 +239,9 @@ export class Game {
         // Actualizar ataque
         const attackPressed = this.inputManager.isAttackPressed();
         this.attackController.update(deltaTime, attackPressed, this.enemies);
+        
+        // Auto-ataque en móvil (atacar al enemigo más cercano sin presionar botón)
+        this.updateAutoAttack(deltaTime);
         
         // Actualizar jugador
         this.player.update(deltaTime);
@@ -347,6 +387,54 @@ export class Game {
         
         console.log(`👻 Aliado invocado (${this.army.length}/${this.player.armyCapacity})`);
     }
+    
+    /**
+     * Actualiza auto-ataque para móviles (atacar al enemigo más cercano)
+     */
+    updateAutoAttack(deltaTime) {
+        this.timeSinceAutoAttack += deltaTime;
+        
+        // Solo en móviles
+        if (!this.inputManager.virtualJoystick || !this.inputManager.virtualJoystick.isMobile) {
+            return;
+        }
+        
+        if (this.timeSinceAutoAttack >= this.autoAttackCooldown && this.enemies.length > 0) {
+            // Encontrar enemigo más cercano
+            let closestEnemy = null;
+            let minDist = Infinity;
+            const playerCenterX = this.player.x + this.player.width / 2;
+            const playerCenterY = this.player.y + this.player.height / 2;
+            
+            for (const enemy of this.enemies) {
+                if (!enemy.active) continue;
+                
+                const enemyCenterX = enemy.x + enemy.width / 2;
+                const enemyCenterY = enemy.y + enemy.height / 2;
+                const dx = enemyCenterX - playerCenterX;
+                const dy = enemyCenterY - playerCenterY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                // Solo atacar si está dentro del rango de ataque
+                if (dist < 200 && dist < minDist) {
+                    minDist = dist;
+                    closestEnemy = enemy;
+                }
+            }
+            
+            // Disparar al enemigo más cercano
+            if (closestEnemy) {
+                const dx = closestEnemy.x - this.player.x;
+                const dy = closestEnemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const vx = (dx / dist) * 400;
+                const vy = (dy / dist) * 400;
+                
+                this.attackController.createProjectile(vx, vy);
+                this.timeSinceAutoAttack = 0;
+            }
+        }
+    }
 
     render() {
         // Limpiar canvas
@@ -377,6 +465,12 @@ export class Game {
             player: this.player,
             armyCount: this.army.length
         });
+        
+        // Renderizar joystick virtual (solo en móviles)
+        const joystick = this.inputManager.getVirtualJoystick();
+        if (joystick && joystick.isMobile) {
+            joystick.render(this.ctx);
+        }
         
         // Debug
         if (this.showDebug) {

@@ -322,11 +322,23 @@ export class CardSystem {
      * Aplica el efecto de una carta al jugador
      */
     applyCard(card, player) {
+        if (!player) return;
+
+        // Evitar aplicar la misma carta dos veces
+        if (!player.appliedCards) player.appliedCards = new Set();
+        if (player.appliedCards.has(card.id)) {
+            // Ya aplicada, ignorar
+            return;
+        }
+
         if (card.effect) {
             card.effect(player);
         }
         
+        // Marcar como aplicada
+        player.appliedCards.add(card.id);
+
         // Emitir evento de carta aplicada
-        this.eventBus.emit('CARD_APPLIED', { card, player });
+        if (this.eventBus) this.eventBus.emit('CARD_APPLIED', { card, player });
     }
 }

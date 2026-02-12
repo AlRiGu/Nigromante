@@ -570,6 +570,9 @@ export class SpriteRenderer {
             // BÁCULO DETALLADO: Ref image_b88bf9.jpg - Báculo con calavera y fuego fatuo
             const staffColor = isGhost ? 'rgba(100, 80, 60, 0.6)' : '#4a3020';
             const gemColor = isGhost ? 'rgba(255, 100, 255, 0.9)' : '#ff3333';
+            const gemColorRgba70 = isGhost ? 'rgba(255, 100, 255, 0.7)' : 'rgba(255, 51, 51, 0.7)';
+            const gemColorRgba50 = isGhost ? 'rgba(255, 100, 255, 0.5)' : 'rgba(255, 51, 51, 0.5)';
+            const gemColorRgba00 = isGhost ? 'rgba(255, 100, 255, 0)' : 'rgba(255, 51, 51, 0)';
             const skullColor = isGhost ? 'rgba(255, 255, 200, 0.8)' : '#e8d5a0';
             
             // Mango del báculo (textura de madera)
@@ -615,9 +618,9 @@ export class SpriteRenderer {
                 x + width * 0.95, y + height * 0.12, 0,
                 x + width * 0.95, y + height * 0.12, glowRadius * gemPulse
             );
-            glowGradient.addColorStop(0, `${gemColor}B3`); // 70% alpha
-            glowGradient.addColorStop(0.3, `${gemColor}80`); // 50% alpha
-            glowGradient.addColorStop(1, `${gemColor}00`); // 0% alpha
+            glowGradient.addColorStop(0, gemColorRgba70); // 70% alpha
+            glowGradient.addColorStop(0.3, gemColorRgba50); // 50% alpha
+            glowGradient.addColorStop(1, gemColorRgba00); // 0% alpha
 
             ctx.fillStyle = glowGradient;
             ctx.beginPath();

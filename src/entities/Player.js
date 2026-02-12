@@ -35,6 +35,9 @@ export class Player extends Entity {
         this.speed = 100;  // REBALANCEO: Reducido de 120 a 100
         this.inputX = 0;
         this.inputY = 0;
+
+        // Cartas aplicadas (para evitar aplicar efectos duplicados)
+        this.appliedCards = new Set();
         
         // Visual
         this.color = '#8b00ff'; // Púrpura nigromante

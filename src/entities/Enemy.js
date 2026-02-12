@@ -315,6 +315,7 @@ export class Enemy extends Entity {
      */
     shootProjectile(projectilesArray) {
         if (this.type !== 'shaman') return false;
+        if (!Array.isArray(projectilesArray)) return false;
         // FASE A: Validar target válido (anti-bloqueo)
         if (!this.target || !this.target.active || this.target.health <= 0) {
             this.target = null;
