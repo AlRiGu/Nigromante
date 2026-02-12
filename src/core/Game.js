@@ -260,8 +260,12 @@ export class Game {
         
         // Actualizar aliados y hacerles buscar enemigos
         this.army.forEach(ally => {
-            if (ally.mode === 'follow' && this.enemies.length > 0) {
-                ally.findNearestEnemy(this.enemies);
+            // Chamanes aliados (escolta) siempre buscan enemigos
+            // Otros aliados buscan solo en modo 'follow'
+            if (this.enemies.length > 0) {
+                if (ally.originalType === 'shaman' || ally.mode === 'follow') {
+                    ally.findNearestEnemy(this.enemies);
+                }
             }
         });
         

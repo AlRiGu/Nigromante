@@ -118,20 +118,79 @@ export class ArmyUnit extends Entity {
         this.particleTimer += deltaTime;
         
         if (this.owner) {
-            // Si tiene un target enemigo, atacarlo
-            if (this.target && this.target.active) {
-                this.mode = 'attack';
-                this.attackTarget(deltaTime);
+            // IA DIFERENTE PARA CHAMÁN ALIADO: Escolta activa
+            if (this.originalType === 'shaman') {
+                this.updateShamanEscort(deltaTime);
             } else {
-                // Si no, seguir al dueño con separación
-                this.mode = 'follow';
-                this.target = null;
-                this.followOwnerWithSeparation(deltaTime);
+                // Otros aliados: seguimiento normal o ataque
+                if (this.target && this.target.active) {
+                    this.mode = 'attack';
+                    this.attackTarget(deltaTime);
+                } else {
+                    // Si no, seguir al dueño con separación
+                    this.mode = 'follow';
+                    this.target = null;
+                    this.followOwnerWithSeparation(deltaTime);
+                }
             }
             
             // Generar rastro de partículas ectoplasma al moverse
             this.spawnEctoplasmTrail();
         }
+    }
+    
+    /**
+     * IA de Escolta Activa para Chamán Aliado
+     * Sigue al jugador constantemente y dispara a enemigos cercanos en movimiento
+     * @param {number} deltaTime - Delta time
+     */
+    updateShamanEscort(deltaTime) {
+        this.mode = 'escort';
+        
+        // PRIORIDAD 1: Seguir al jugador siempre (mantener distancia de escolta)
+        this.followOwnerWithSeparation(deltaTime);
+        
+        // PRIORIDAD 2: Mientras sigue, buscar enemigo más cercano y disparar
+        if (this.target && this.target.active) {
+            // Target sigue siendo válido, disparar
+            this.shootProjectile();
+        } else {
+            // Buscar nuevo target más cercano
+            this.findNearestEnemyInRange();
+            
+            // Si encontramos uno, disparar
+            if (this.target && this.target.active) {
+                this.shootProjectile();
+            }
+        }
+    }
+    
+    /**
+     * Busca el enemigo más cercano dentro del rango de detección
+     * @private
+     */
+    findNearestEnemyInRange() {
+        if (!this.target || !this.target.active) {
+            this.target = null;
+        }
+        
+        // Si ya tiene un target acucha dentro del rango, mantenerlo
+        if (this.target && this.target.active) {
+            const myCenterX = this.x + this.width / 2;
+            const myCenterY = this.y + this.height / 2;
+            const targetCenterX = this.target.x + this.target.width / 2;
+            const targetCenterY = this.target.y + this.target.height / 2;
+            const dx = targetCenterX - myCenterX;
+            const dy = targetCenterY - myCenterY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < this.detectionRange) return; // Mantener target actual cuánto sigan siendo cercanos
+        }
+        
+        // Buscar nuevo target si no hay o está fuera de rango
+        // Este método es llamado desde el Game después de actualizar las entidades
+        // Por ahora, el target es asignado por Game.convertEnemyToAlly()
+        // La búsqueda activa ocurre en Game.update() mediante findNearestEnemy()
     }
 
     /**

@@ -1,8 +1,42 @@
 /**
  * SpriteRenderer - Sistema de renderizado de sprites complejos
  * Genera gráficos detallados usando Canvas API
+ * FASE PROFESIONAL: Iluminación global, volumen real, texturas metalicas
  */
 export class SpriteRenderer {
+    // === SISTEMA DE ILUMINACIÓN GLOBAL ===
+    static LIGHT_DIR = { x: -0.6, y: -1.0 }; // Dirección normalizada de luz principal
+    
+    /**
+     * Oscurece un color hexadecimal por un porcentaje
+     * @param {string} hex - Color en formato #RRGGBB
+     * @param {number} percent - Porcentaje de oscurecimiento (0-1)
+     * @returns {string} Color oscurecido en formato #RRGGBB
+     */
+    static shadeColor(hex, percent) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const amt = Math.floor(255 * percent);
+        const R = Math.max(0, (num >> 16) - amt);
+        const G = Math.max(0, (num >> 8 & 0x00FF) - amt);
+        const B = Math.max(0, (num & 0x0000FF) - amt);
+        return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+    }
+    
+    /**
+     * Aclara un color hexadecimal por un porcentaje
+     * @param {string} hex - Color en formato #RRGGBB
+     * @param {number} percent - Porcentaje de aclarado (0-1)
+     * @returns {string} Color aclarado en formato #RRGGBB
+     */
+    static lightenColor(hex, percent) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const amt = Math.floor(255 * percent);
+        const R = Math.min(255, (num >> 16) + amt);
+        const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+        const B = Math.min(255, (num & 0x0000FF) + amt);
+        return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+    }
+    
     /**
      * Renderiza el sprite del Nigromante (jugador)
      * @param {CanvasRenderingContext2D} ctx - Contexto del canvas
@@ -197,63 +231,84 @@ export class SpriteRenderer {
             ctx.globalAlpha *= flicker;
         }
         
-        // === SOMBRA ===
+        // === SOMBRA Y AMBIENT OCCLUSION ===
         if (!isGhost) {
+            // Sombra principal bajo el personaje
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.beginPath();
             ctx.ellipse(centerX, y + height, width * 0.35, height * 0.12, 0, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Ambient occlusion sutil en la base (multiply para sombras de contacto)
+            const prevComposite = ctx.globalCompositeOperation;
+            ctx.globalCompositeOperation = 'multiply';
+            
+            const aoGradient = ctx.createRadialGradient(
+                centerX, y + height * 0.95, 0,
+                centerX, y + height * 0.95, width * 0.5
+            );
+            aoGradient.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
+            aoGradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = aoGradient;
+            ctx.beginPath();
+            ctx.ellipse(centerX, y + height * 0.95, width * 0.4, height * 0.15, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.globalCompositeOperation = prevComposite;
         }
         
-        // === CUERPO (TORSO MUSCULOSO) ===
-        // FASE C: Colores según el tipo (Ref: imágenes de referencia)
-        let skinColor, skinDark, skinLight;
+        // === CUERPO (TORSO MUSCULOSO) CON ILUMINACIÓN REALISTA ===
+        // FASE C: Colores según el tipo + Iluminación profesional
+        let baseColor, shadowColor, highlightColor;
         
         if (isGhost) {
-            skinColor = '#00ffff';
-            skinDark = '#00ccff';
-            skinLight = '#6600ff';
+            baseColor = '#0099ff';
+            shadowColor = SpriteRenderer.shadeColor(baseColor, 0.4);
+            highlightColor = SpriteRenderer.lightenColor(baseColor, 0.3);
         } else {
             switch(type) {
                 case 'tank':
-                    // Ref image_b887fa.jpg: Orco masivo verde oscuro con armadura pesada
-                    skinColor = '#1a3d0f';  // Verde muy oscuro, casi negro
-                    skinDark = '#0f2a08';
-                    skinLight = '#254d18';
+                    baseColor = '#1a3d0f';
+                    shadowColor = SpriteRenderer.shadeColor(baseColor, 0.5);
+                    highlightColor = SpriteRenderer.lightenColor(baseColor, 0.25);
                     break;
                 case 'shaman':
-                    // Ref image_b88bf9.jpg: Orco con túnica, piel verdosa normal
-                    skinColor = '#4a6b35';  // Verde parduzco natural
-                    skinDark = '#3a5b25';
-                    skinLight = '#5a7b45';
+                    baseColor = '#4a6b35';
+                    shadowColor = SpriteRenderer.shadeColor(baseColor, 0.45);
+                    highlightColor = SpriteRenderer.lightenColor(baseColor, 0.28);
                     break;
                 case 'assassin':
-                    // Ref image_b8de8d.jpg: Orco encorvado, piel pálida gris-verde
-                    skinColor = '#6b7a5c';  // Verde pálido grisáceo
-                    skinDark = '#5b6a4c';
-                    skinLight = '#7b8a6c';
+                    baseColor = '#6b7a5c';
+                    shadowColor = SpriteRenderer.shadeColor(baseColor, 0.4);
+                    highlightColor = SpriteRenderer.lightenColor(baseColor, 0.22);
                     break;
                 default: // warrior
-                    skinColor = '#4a7832';  // Verde estándar
-                    skinDark = '#3d6629';
-                    skinLight = '#568a3d';
+                    baseColor = '#4a7832';
+                    shadowColor = SpriteRenderer.shadeColor(baseColor, 0.42);
+                    highlightColor = SpriteRenderer.lightenColor(baseColor, 0.25);
             }
         }
         
-        const skinGradient = ctx.createLinearGradient(x, y, x + width, y);
+        // Degradado realista: luz direccional + volumen
+        const bodyX = x + width * 0.15;
+        const bodyY = y + height * 0.35;
+        const bodyWidth = width * 0.7;
+        const bodyHeight = height * 0.55;
         
-        if (isGhost) {
-            skinGradient.addColorStop(0, '#00ccff');
-            skinGradient.addColorStop(0.5, '#0099ff');
-            skinGradient.addColorStop(1, '#6600ff');
-        } else {
-            skinGradient.addColorStop(0, skinDark);
-            skinGradient.addColorStop(0.5, skinColor);
-            skinGradient.addColorStop(1, skinLight);
-        }
+        // Degradado principal (izq a der, simulando luz según LIGHT_DIR)
+        const bodyGradient = ctx.createLinearGradient(bodyX, bodyY, bodyX + bodyWidth, bodyY);
+        bodyGradient.addColorStop(0, highlightColor);     // Lado iluminado
+        bodyGradient.addColorStop(0.5, baseColor);        // Centro
+        bodyGradient.addColorStop(1, shadowColor);        // Lado en sombra
         
-        ctx.fillStyle = skinGradient;
-        ctx.fillRect(x + width * 0.15, y + height * 0.35, width * 0.7, height * 0.55);
+        ctx.fillStyle = bodyGradient;
+        ctx.fillRect(bodyX, bodyY, bodyWidth, bodyHeight);
+        
+        // Outline oscuro para volumen (profesional)
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bodyX, bodyY, bodyWidth, bodyHeight);
         
         // Músculos (detalles)
         ctx.strokeStyle = isGhost ? 'rgba(0, 200, 255, 0.5)' : 'rgba(0, 0, 0, 0.3)';
@@ -263,27 +318,33 @@ export class SpriteRenderer {
         ctx.lineTo(centerX, y + height * 0.8);
         ctx.stroke();
         
-        // === CABEZA ===
+        // === CABEZA CON ILUMINACIÓN ===
+        const headBase = isGhost ? '#0066cc' : baseColor;
+        const headShadow = SpriteRenderer.shadeColor(headBase, 0.35);
+        const headHighlight = SpriteRenderer.lightenColor(headBase, 0.2);
+        
         const headGradient = ctx.createRadialGradient(
             centerX, y + height * 0.2, 0,
             centerX, y + height * 0.2, width * 0.35
         );
-        
-        if (isGhost) {
-            headGradient.addColorStop(0, '#33ddff');
-            headGradient.addColorStop(1, '#0088ff');
-        } else {
-            headGradient.addColorStop(0, '#527a3a');
-            headGradient.addColorStop(1, '#3d6629');
-        }
+        headGradient.addColorStop(0, headHighlight);
+        headGradient.addColorStop(0.6, headBase);
+        headGradient.addColorStop(1, headShadow);
         
         ctx.fillStyle = headGradient;
         ctx.beginPath();
         ctx.ellipse(centerX, y + height * 0.22, width * 0.35, height * 0.25, 0, 0, Math.PI * 2);
         ctx.fill();
         
+        // Outline de cabeza (profesional)
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(centerX, y + height * 0.22, width * 0.35, height * 0.25, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
         // Mandíbula prominente
-        ctx.fillStyle = isGhost ? '#0099ff' : '#3d6629';
+        ctx.fillStyle = isGhost ? '#0099ff' : shadowColor;
         ctx.beginPath();
         ctx.moveTo(centerX - width * 0.25, y + height * 0.3);
         ctx.quadraticCurveTo(centerX, y + height * 0.4, centerX + width * 0.25, y + height * 0.3);
@@ -306,51 +367,56 @@ export class SpriteRenderer {
         ctx.lineTo(centerX + width * 0.12, y + height * 0.38);
         ctx.fill();
         
-        // === OJOS ===
+        // === OJOS CON GLOW PULSANTE (PROFESIONAL) ===
         const eyeColor = isGhost ? '#ffffff' : '#ffff00';
+        const pupilColor = isGhost ? '#ff00ff' : '#ff0000';
         
-        // OPTIMIZACIÓN: Reemplazar shadowBlur con gradiente (shadowBlur es muy costoso)
-        if (isGhost) {
-            // Efecto de glow usando gradiente en lugar de shadowBlur
-            const glowIntensity = 0.7 + Math.sin(time * 5) * 0.3;
-            
-            // Glow ojo izquierdo
-            const glowLeft = ctx.createRadialGradient(
-                centerX - width * 0.125, y + height * 0.21, 0,
-                centerX - width * 0.125, y + height * 0.21, width * 0.2
-            );
-            glowLeft.addColorStop(0, `rgba(0, 255, 255, ${glowIntensity})`);
-            glowLeft.addColorStop(0.5, `rgba(0, 255, 255, ${glowIntensity * 0.5})`);
-            glowLeft.addColorStop(1, 'transparent');
-            
-            ctx.fillStyle = glowLeft;
-            ctx.beginPath();
-            ctx.arc(centerX - width * 0.125, y + height * 0.21, width * 0.2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Glow ojo derecho
-            const glowRight = ctx.createRadialGradient(
-                centerX + width * 0.125, y + height * 0.21, 0,
-                centerX + width * 0.125, y + height * 0.21, width * 0.2
-            );
-            glowRight.addColorStop(0, `rgba(0, 255, 255, ${glowIntensity})`);
-            glowRight.addColorStop(0.5, `rgba(0, 255, 255, ${glowIntensity * 0.5})`);
-            glowRight.addColorStop(1, 'transparent');
-            
-            ctx.fillStyle = glowRight;
-            ctx.beginPath();
-            ctx.arc(centerX + width * 0.125, y + height * 0.21, width * 0.2, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // Glow pulsante usando time (sin Date.now para mejor performance)
+        const glowPulse = 0.5 + Math.sin(time * 6) * 0.4;
+        const glowIntensity = Math.min(1, glowPulse);
+        const glowRadius = width * 0.15;
         
+        // Glow ojo izquierdo
+        const glowLeft = ctx.createRadialGradient(
+            centerX - width * 0.15, y + height * 0.21, 0,
+            centerX - width * 0.15, y + height * 0.21, glowRadius
+        );
+        glowLeft.addColorStop(0, `rgba(${isGhost ? '0, 255, 255' : '255, 255, 0'}, ${glowIntensity})`);
+        glowLeft.addColorStop(0.5, `rgba(${isGhost ? '0, 255, 255' : '255, 255, 0'}, ${glowIntensity * 0.4})`);
+        glowLeft.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = glowLeft;
+        ctx.beginPath();
+        ctx.arc(centerX - width * 0.15, y + height * 0.21, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Glow ojo derecho
+        const glowRight = ctx.createRadialGradient(
+            centerX + width * 0.125, y + height * 0.21, 0,
+            centerX + width * 0.125, y + height * 0.21, glowRadius
+        );
+        glowRight.addColorStop(0, `rgba(${isGhost ? '0, 255, 255' : '255, 255, 0'}, ${glowIntensity})`);
+        glowRight.addColorStop(0.5, `rgba(${isGhost ? '0, 255, 255' : '255, 255, 0'}, ${glowIntensity * 0.4})`);
+        glowRight.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = glowRight;
+        ctx.beginPath();
+        ctx.arc(centerX + width * 0.125, y + height * 0.21, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Ojos (rectángulos)
         ctx.fillStyle = eyeColor;
-        // Ojo izquierdo
         ctx.fillRect(centerX - width * 0.2, y + height * 0.15, width * 0.15, height * 0.12);
-        // Ojo derecho
         ctx.fillRect(centerX + width * 0.05, y + height * 0.15, width * 0.15, height * 0.12);
         
-        // Pupilas rojas
-        ctx.fillStyle = isGhost ? '#ff00ff' : '#ff0000';
+        // Outline de ojos
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(centerX - width * 0.2, y + height * 0.15, width * 0.15, height * 0.12);
+        ctx.strokeRect(centerX + width * 0.05, y + height * 0.15, width * 0.15, height * 0.12);
+        
+        // Pupilas
+        ctx.fillStyle = pupilColor;
         ctx.fillRect(centerX - width * 0.15, y + height * 0.17, width * 0.08, height * 0.08);
         ctx.fillRect(centerX + width * 0.1, y + height * 0.17, width * 0.08, height * 0.08);
         
@@ -412,26 +478,53 @@ export class SpriteRenderer {
             ctx.stroke();
             
         } else if (type === 'tank') {
-            // TANQUE: Ref image_b887fa.jpg - Armadura pesada gris con hombreras masivas y pinchos
-            const armorColor = isGhost ? 'rgba(120, 120, 130, 0.6)' : '#4a4a4a';
-            const metalDark = isGhost ? 'rgba(80, 80, 90, 0.7)' : '#2a2a2a';
-            const metalLight = isGhost ? 'rgba(180, 180, 200, 0.7)' : '#707070';
+            // TANQUE: Armadura pesada con texturas metálicas profesionales
+            const metalBase = '#4a4a4a';
+            const metalHighlight = SpriteRenderer.lightenColor(metalBase, 0.35);
+            const metalMid = metalBase;
+            const metalLight = SpriteRenderer.lightenColor(metalBase, 0.2);
+            const metalShadow = SpriteRenderer.shadeColor(metalBase, 0.5);
+            const metalVeryDark = SpriteRenderer.shadeColor(metalBase, 0.7);
             
-            // HOMBRERAS MASIVAS CON PINCHOS (característica principal)
-            ctx.fillStyle = armorColor;
+            // HOMBRERAS MASIVAS CON ILUMINACIÓN
+            // Hombrera izquierda con degradado radial
+            const shoulderLeftGrad = ctx.createRadialGradient(
+                x + width * 0.05, y + height * 0.3, 0,
+                x + width * 0.05, y + height * 0.3, width * 0.22
+            );
+            shoulderLeftGrad.addColorStop(0, metalHighlight);
+            shoulderLeftGrad.addColorStop(0.5, metalMid);
+            shoulderLeftGrad.addColorStop(1, metalShadow);
             
-            // Hombrera izquierda grande
+            ctx.fillStyle = shoulderLeftGrad;
             ctx.beginPath();
             ctx.arc(x + width * 0.05, y + height * 0.35, width * 0.22, 0, Math.PI * 2);
             ctx.fill();
             
-            // Hombrera derecha grande  
+            // Outline de hombrera izquierda
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Hombrera derecha con degradado radial
+            const shoulderRightGrad = ctx.createRadialGradient(
+                x + width * 0.95, y + height * 0.3, 0,
+                x + width * 0.95, y + height * 0.3, width * 0.22
+            );
+            shoulderRightGrad.addColorStop(0, metalHighlight);
+            shoulderRightGrad.addColorStop(0.5, metalMid);
+            shoulderRightGrad.addColorStop(1, metalShadow);
+            
+            ctx.fillStyle = shoulderRightGrad;
             ctx.beginPath();
             ctx.arc(x + width * 0.95, y + height * 0.35, width * 0.22, 0, Math.PI * 2);
             ctx.fill();
             
-            // Pinchos en hombreras
-            ctx.fillStyle = metalDark;
+            // Outline de hombrera derecha
+            ctx.stroke();
+            
+            // Pinchos en hombreras (con efectos de luz)
+            ctx.fillStyle = metalVeryDark;
             for (let i = 0; i < 6; i++) {
                 const angle = (i * Math.PI) / 3;
                 // Pinchos hombrera izquierda
@@ -454,20 +547,55 @@ export class SpriteRenderer {
                 ctx.stroke();
             }
             
-            // Peto masivo con placas superpuestas
-            ctx.fillStyle = armorColor;
-            ctx.fillRect(x + width * 0.1, y + height * 0.4, width * 0.8, height * 0.5);
+            // Peto masivo con gradiente metálico de 5 capas
+            const petoX = x + width * 0.1;
+            const petoY = y + height * 0.4;
+            const petoW = width * 0.8;
+            const petoH = height * 0.5;
             
-            // Placas superiores del peto
-            ctx.fillStyle = metalLight;
+            // Gradiente principal (izq a der)
+            const petoGrad = ctx.createLinearGradient(petoX, petoY, petoX + petoW, petoY);
+            petoGrad.addColorStop(0, metalHighlight);
+            petoGrad.addColorStop(0.25, metalMid);
+            petoGrad.addColorStop(0.5, metalBase);
+            petoGrad.addColorStop(0.75, metalMid);
+            petoGrad.addColorStop(1, metalShadow);
+            
+            ctx.fillStyle = petoGrad;
+            ctx.fillRect(petoX, petoY, petoW, petoH);
+            
+            // Outline del peto
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(petoX, petoY, petoW, petoH);
+            
+            // Placas superiores del peto (con más contraste)
+            const placa1Grad = ctx.createLinearGradient(x + width * 0.15, y + height * 0.42, x + width * 0.85, y + height * 0.42);
+            placa1Grad.addColorStop(0, metalHighlight);
+            placa1Grad.addColorStop(0.5, metalLight);
+            placa1Grad.addColorStop(1, metalMid);
+            
+            ctx.fillStyle = placa1Grad;
             ctx.fillRect(x + width * 0.15, y + height * 0.42, width * 0.7, height * 0.15);
             
+            // Outline placa 1
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + width * 0.15, y + height * 0.42, width * 0.7, height * 0.15);
+            
             // Placas medias
-            ctx.fillStyle = armorColor;
+            const placa2Grad = ctx.createLinearGradient(x + width * 0.12, y + height * 0.58, x + width * 0.88, y + height * 0.58);
+            placa2Grad.addColorStop(0, metalMid);
+            placa2Grad.addColorStop(0.5, metalBase);
+            placa2Grad.addColorStop(1, metalShadow);
+            
+            ctx.fillStyle = placa2Grad;
             ctx.fillRect(x + width * 0.12, y + height * 0.58, width * 0.76, height * 0.15);
             
-            // REMACHES GRANDES (muy característico)
-            ctx.fillStyle = metalDark;
+            // Outline placa 2
+            ctx.strokeRect(x + width * 0.12, y + height * 0.58, width * 0.76, height * 0.15);
+            
+            // REMACHES BRILLOSOS (5 capas de iluminación)
             const rivetSize = width * 0.06;
             const positions = [
                 [0.2, 0.45], [0.35, 0.45], [0.5, 0.45], [0.65, 0.45], [0.8, 0.45],
@@ -476,17 +604,55 @@ export class SpriteRenderer {
             ];
             
             positions.forEach(([px, py]) => {
+                // Remache con degradado radial
+                const rivetGrad = ctx.createRadialGradient(
+                    x + width * px - rivetSize * 0.3, y + height * py - rivetSize * 0.3, 0,
+                    x + width * px, y + height * py, rivetSize
+                );
+                rivetGrad.addColorStop(0, metalLight);
+                rivetGrad.addColorStop(0.3, metalMid);
+                rivetGrad.addColorStop(1, metalVeryDark);
+                
+                ctx.fillStyle = rivetGrad;
                 ctx.beginPath();
                 ctx.arc(x + width * px, y + height * py, rivetSize, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Brillo en remaches
-                ctx.fillStyle = metalLight;
-                ctx.beginPath();
-                ctx.arc(x + width * px - rivetSize * 0.3, y + height * py - rivetSize * 0.3, rivetSize * 0.4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = metalDark;
+                // Outline del remache
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 1;
+                ctx.stroke();
             });
+            
+            // MICRO-RAYONES (scratches) - Opacidad 0.15 para efecto de uso
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 8; i++) {
+                const sx = x + width * (0.15 + Math.random() * 0.7);
+                const sy = y + height * (0.4 + Math.random() * 0.5);
+                const ex = sx + (Math.random() - 0.5) * width * 0.15;
+                const ey = sy + (Math.random() - 0.5) * height * 0.1;
+                
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+            }
+            
+            // Adicionales micro-rayones oscuros
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < 5; i++) {
+                const sx = x + width * (0.15 + Math.random() * 0.7);
+                const sy = y + height * (0.4 + Math.random() * 0.5);
+                const ex = sx + (Math.random() - 0.5) * width * 0.1;
+                const ey = sy + (Math.random() - 0.5) * height * 0.08;
+                
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(ex, ey);
+                ctx.stroke();
+            }
             
         } else if (type === 'assassin') {
             // ASESINO: Ref image_b8de8d.jpg - Figura encorvada, capucha, ropa oscura ajustada
